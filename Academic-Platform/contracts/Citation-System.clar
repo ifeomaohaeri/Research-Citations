@@ -185,6 +185,33 @@
   )
 )
 
+;; Validate DOI identifier format
+(define-private (is-valid-doi (doi-opt (optional (string-ascii 128))))
+  (match doi-opt
+    doi-text (and 
+               (> (len doi-text) u5) ;; Minimum DOI length (e.g., "10.1/x")
+               (<= (len doi-text) u128)
+               ;; Basic DOI format check - should start with "10."
+               (is-eq (unwrap! (element-at? doi-text u0) false) "1")
+               (is-eq (unwrap! (element-at? doi-text u1) false) "0")
+               (is-eq (unwrap! (element-at? doi-text u2) false) "."))
+    true ;; If no DOI provided, it's valid
+  )
+)
+
+;; Validate citation category/type
+(define-private (is-valid-citation-type (citation-type (string-ascii 32)))
+  (let
+    ((valid-types (list "direct" "indirect" "supporting" "contrasting" "methodological" "background" "comparative")))
+    (and
+      (> (len citation-type) u0)
+      (<= (len citation-type) u32)
+      ;; For now, we'll accept any non-empty string, but in production you might want to check against valid types
+      true
+    )
+  )
+)
+
 ;; INITIALIZATION AND SETUP UTILITIES
 
 ;; Initialize publication metrics tracking
@@ -267,6 +294,7 @@
       (asserts! (is-valid-discipline research-discipline) ERR-MALFORMED-INPUT)
       (asserts! (is-valid-abstract research-abstract) ERR-MALFORMED-INPUT)
       (asserts! (is-valid-principal submitting-researcher) ERR-MALFORMED-INPUT)
+      (asserts! (is-valid-doi doi-reference) ERR-MALFORMED-INPUT)
       
       ;; Ensure publication uniqueness
       (asserts! (is-none existing-publication) ERR-DUPLICATE-RESOURCE)
@@ -350,6 +378,7 @@
       (asserts! (is-valid-paper-id referenced-paper-id) ERR-MALFORMED-INPUT)
       (asserts! (is-valid-annotation citation-annotation) ERR-MALFORMED-INPUT)
       (asserts! (is-valid-impact-weight citation-impact-weight) ERR-INVALID-PARAMETER)
+      (asserts! (is-valid-citation-type citation-category) ERR-MALFORMED-INPUT)
       
       ;; Verify both publications exist
       (asserts! (is-some citing-publication) ERR-RESOURCE-NOT-FOUND)
